@@ -1,25 +1,40 @@
+#specify full file path of IGMT output in first argument
+#specify full file name for output og script in second argument
+#specify the number of sequences in the fastq file in the third argument
+
 args<-commandArgs(TRUE)
 infile=args[1]
 outfile=args[2]
 nseq = args[3]
+
+#load required packages
 library(data.table)
+
+#read in output from IGMT
 test <- scan(infile, what = "list", sep = "\n")
+
+#create empty list
 info <- list()
+
+#seperate information for each sequence
 for (n in 1:nseq){
   index1 <- grep("Sequence number", test)[n]
   index2 <- ifelse(is.na(grep("Sequence number", test)[n+1]),length(test), grep("Sequence number", test)[n+1])
   info[[n]] <- test[index1:(index2-1)]
 }
 
+#seperate a chain and bchain info
 achain <- info[grep("JMWA",info)]
 bchain <- info[grep("JMWB",info)]
 
+#outputs percentage for v/d/j
 matchper <- function(chain){
   identity <- ifelse(is.na(sapply(strsplit(chain,";"),"[",4)[1]),"NA",sapply(strsplit(chain,";"),"[",4))
   percent <- ifelse(is.na(sapply(strsplit(chain,";"),"[",4)[1]),"NA",sapply(strsplit(identity,"="),"[",2))
   return(percent)
 }
 
+#Gets info for A chain, places into dataframe 
 checkA <- function(infoA){
   name <- sapply(strsplit(infoA[1],":"), "[", 2)
   number <- sapply(strsplit(infoA[1],"-"), "[", 3)
@@ -38,6 +53,8 @@ checkA <- function(infoA){
   return(df)
 }
 
+
+#Gets info for B chain, places into dataframe 
 checkB <- function(infoB){
   name <- sapply(strsplit(infoB[1],":"), "[", 2)
   number <- sapply(strsplit(infoB[1],"-"), "[", 3)
@@ -58,16 +75,21 @@ checkB <- function(infoB){
   return(df)
 }
 
+#applies functions above on all sequences in list 
 test1 <- lapply(achain, checkA)
 
 test2 <- lapply(bchain, checkB)
 
+#make dataframe from list of dataframes, orders numerically, then by letter
 dfa <- rbindlist(test1)
 dfa <- dfa[order(as.numeric(gsub("([0-9]+)([A-Z]+)", "\\1", dfa$number)),gsub("([0-9]+)([A-Z]+)", "\\2", dfa$number))]
 
 dfb <- rbindlist(test2)
 dfb <- dfb[order(as.numeric(gsub("([0-9]+)([A-Z]+)", "\\1", dfb$number)),gsub("([0-9]+)([A-Z]+)", "\\2", dfb$number))]
 
+
+#match A and B 
 final <-cbind(dfa,dfb)
 
+#write output
 write.table(final, file = outfile, sep = "\t", row.names = F, quote = F)
