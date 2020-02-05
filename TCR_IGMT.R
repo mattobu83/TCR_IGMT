@@ -1,5 +1,5 @@
 #specify full file path of IGMT output in first argument
-#specify full file name for output og script in second argument
+#specify full file name for output of script in second argument
 #specify the number of sequences in the fastq file in the third argument
 
 args<-commandArgs(TRUE)
