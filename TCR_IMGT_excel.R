@@ -1,6 +1,7 @@
 args<-commandArgs(TRUE)
 infile=args[1]
 outfile=args[2]
+infile2 = args[3]
 
 library(readxl)
 library(plyr)
@@ -8,6 +9,13 @@ library(stringr)
 
 #load in the Excel file from IMGT
 imgt <- read_excel(infile,sheet = 1)
+
+if (infile2 == 'none') {
+  print("No Second File Passed")
+} else {
+  imgt2 <- read_excel(infile2,sheet = 1)
+  imgt <- rbind(imgt,imgt2)
+}
 
 #split into a Chain and b chain
 achain <- imgt[grep("JMWA",imgt$`Sequence ID`),]
