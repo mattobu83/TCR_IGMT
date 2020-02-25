@@ -10,16 +10,23 @@ library(stringr)
 #load in the Excel file from IMGT
 imgt <- read_excel(infile,sheet = 1)
 
+if (lengths(strsplit(as.character(imgt$`Sequence ID` ),"-")[1]) == 1) {
+  print("Simple ID input")
+  achain <- imgt[as.numeric(str_extract(imgt$`Sequence ID`, "[0-9]+")) %% 2 != 0 ,]
+  bchain <- imgt[as.numeric(str_extract(imgt$`Sequence ID`, "[0-9]+")) %% 2 == 0 ,]
+} else {
+  print("Other ID input")
+  achain <- imgt[grep("JMWA",imgt$`Sequence ID`),]
+  bchain <- imgt[grep("JMWB",imgt$`Sequence ID`),]
+}
+
+
 if (infile2 == 'none') {
   print("No Second File Passed")
 } else {
   imgt2 <- read_excel(infile2,sheet = 1)
   imgt <- rbind(imgt,imgt2)
 }
-
-#split into a Chain and b chain
-achain <- imgt[grep("JMWA",imgt$`Sequence ID`),]
-bchain <- imgt[grep("JMWB",imgt$`Sequence ID`),]
 
 #get only these columns from the excel file
 interestA <- c("Sequence ID","V-GENE and allele","J-GENE and allele","AA JUNCTION")
@@ -30,8 +37,14 @@ dfa<- data.frame(achain[,interestA])
 dfb<- data.frame(bchain[,interestB])
 
 #Get the well number
-dfa$number <- sapply(strsplit(dfa[,1],"-"), "[", 3)
-dfb$number <- sapply(strsplit(dfb[,1],"-"), "[", 3)
+if (lengths(strsplit(as.character(imgt$`Sequence ID` ),"-")[1]) == 1) {
+  dfa$number <- dfa[,1]
+  dfb$number <- dfb[,1]
+} else {
+  dfa$number <- sapply(strsplit(dfa[,1],"-"), "[", 3)
+  dfb$number <- sapply(strsplit(dfb[,1],"-"), "[", 3)
+}
+
 
 #order by well number for pairing
 dfa <- dfa[order(as.numeric(gsub("([0-9]+)([A-Z]+)", "\\1", dfa$number)),gsub("([0-9]+)([A-Z]+)", "\\2", dfa$number)),]
@@ -134,6 +147,15 @@ final <- final[order(final$freq,decreasing = T),-1]
 colnames(final) <- c("Sequence_ID_Alpha", "Alpha_V","Alpha_J","Alpha_CDR3","Frequency_of_A","Same_A_Wells","Sequence_ID_Beta", "Beta_V","Beta_J","Beta_D","Beta_CDR3","Frequency_of_B","Same_B_Wells","Frequency_of_Pair","Same_Pair_Wells")
 
 
+print(paste("There were",length(rownames(achain)),"Alpha chains in the input file"))
+print(paste("There were",length(rownames(bchain)),"Beta chains in the input file"))
+print(paste("There were",length(rownames(final)),"Unique Pairs"))
+
+nums <- data.frame(c(paste("There were",length(rownames(achain)),"Alpha chains in the input file"),
+                     paste("There were",length(rownames(bchain)),"Beta chains in the input file"),
+                     paste("There were",length(rownames(final)),"Unique Pairs")))
+
 #write output
 write.table(final,file = outfile,row.names = F, quote = F, sep ="\t")
+write.table(nums,file = outfile,row.names = F, quote = F, sep ="\t",append = T,col.names = F)
 
