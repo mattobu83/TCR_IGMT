@@ -21,11 +21,14 @@ if (lengths(strsplit(as.character(imgt$`Sequence ID` ),"-")[1]) == 1) {
 }
 
 
-if (infile2 == 'none') {
+if (length(args)==2) {
   print("No Second File Passed")
-} else {
+} else if (length(args)==3) {
   imgt2 <- read_excel(infile2,sheet = 1)
   imgt <- rbind(imgt,imgt2)
+} else { 
+  print("Wrong number of arguments, check command")
+  stop()
 }
 
 #get only these columns from the excel file
