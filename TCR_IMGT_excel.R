@@ -9,6 +9,17 @@ library(stringr)
 
 #load in the Excel file from IMGT
 imgt <- read_excel(infile,sheet = 1)
+print(dim(imgt))
+
+
+if (length(args)==2) {
+  print("No Second File Passed")
+} else if (length(args)==3) {
+  imgt2 <- read_excel(infile2,sheet = 1)
+  imgt <- rbind(imgt,imgt2)
+  print("Appended Second File to First")
+  print(dim(imgt))
+}
 
 if (lengths(strsplit(as.character(imgt$`Sequence ID` ),"-")[1]) == 1) {
   print("Simple ID input")
@@ -18,17 +29,6 @@ if (lengths(strsplit(as.character(imgt$`Sequence ID` ),"-")[1]) == 1) {
   print("Other ID input")
   achain <- imgt[grep("JMWA",imgt$`Sequence ID`),]
   bchain <- imgt[grep("JMWB",imgt$`Sequence ID`),]
-}
-
-
-if (length(args)==2) {
-  print("No Second File Passed")
-} else if (length(args)==3) {
-  imgt2 <- read_excel(infile2,sheet = 1)
-  imgt <- rbind(imgt,imgt2)
-} else { 
-  print("Wrong number of arguments, check command")
-  stop()
 }
 
 #get only these columns from the excel file
@@ -185,3 +185,4 @@ nums <- data.frame(c(paste("There were",length(rownames(achain)),"Alpha chains i
 #write output
 write.table(final,file = outfile,row.names = F, quote = F, sep ="\t")
 write.table(nums,file = outfile,row.names = F, quote = F, sep ="\t",append = T,col.names = F)
+
