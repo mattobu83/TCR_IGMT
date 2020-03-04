@@ -32,8 +32,8 @@ if (length(args)==2) {
 }
 
 #get only these columns from the excel file
-interestA <- c("Sequence ID","V-GENE and allele","J-GENE and allele","AA JUNCTION")
-interestB <- c("Sequence ID","V-GENE and allele","J-GENE and allele","D-GENE and allele","AA JUNCTION")
+interestA <- c("Sequence ID","V-GENE and allele","J-GENE and allele","AA JUNCTION","V-DOMAIN Functionality")
+interestB <- c("Sequence ID","V-GENE and allele","J-GENE and allele","D-GENE and allele","AA JUNCTION","V-DOMAIN Functionality")
 
 #make a dataframe from columns of interest
 dfa<- data.frame(achain[,interestA])
@@ -117,11 +117,33 @@ pair_groupings <- function(df){
   return(df)
 }
 
+#Outputs unproducive chains
+productive <- function(df){
+  grouped <- list()
+  number <- df$number 
+  group <- df$group
+  prod <- df$V.DOMAIN.Functionality
+  df <- data.frame(number,group,prod)
+  for(i in 1:length(unique(df$group))){
+    grouped[[i]]<- paste(df[df$group == i & df$prod != "productive",]$number, collapse=",")
+  }
+  df <- data.frame(row.names  = 1:length(unique(df$group)) ,unlist(grouped))
+  return(df)
+}
+
 #add to table for each chain 
 groupinga <- groupings(dfa)
 groupingb <- groupings(dfb)
+proda <- productive(dfa)
+prodb <- productive(dfb)
+colnames(proda) <- "Unproductive_A_Chains"
+colnames(prodb) <- "Unproductive_B_Chains"
+
+
 dfa <- merge(dfa,groupinga,by.x='group', by.y=0)
 dfb <- merge(dfb,groupingb,by.x='group', by.y=0)
+dfa <- merge(dfa,proda,by.x='group', by.y=0)
+dfb <- merge(dfb,prodb,by.x='group', by.y=0)
 
 #merge a and b chain tables in order for pairing 
 merged <- merge(dfa,dfb, by ="order",all = T)
@@ -144,11 +166,13 @@ groupingab <- pair_groupings(merged)
 #add to merge dataframe 
 merged <- merge(merged,groupingab,by.x='group', by.y=0)
 
-#tidy up dataframe
-final <- merged[!duplicated(merged$group),-(grep("genes|order|pair|number|group.x|group.y",colnames(merged)))]
-final <- final[order(final$freq,decreasing = T),-1]
-colnames(final) <- c("Sequence_ID_Alpha", "Alpha_V","Alpha_J","Alpha_CDR3","Frequency_of_A","Same_A_Wells","Sequence_ID_Beta", "Beta_V","Beta_J","Beta_D","Beta_CDR3","Frequency_of_B","Same_B_Wells","Frequency_of_Pair","Same_Pair_Wells")
+#add unproductive chain pairs 
+merged$Unproductive_Chains <- paste(merged$Unproductive_A_Chains,merged$Unproductive_B_Chains)
 
+#tidy up dataframe
+final <- merged[!duplicated(merged$group),-(grep("genes|order|pair|number|group.x|group.y|V.DOMAIN.Functionality|Unproductive_B_Chains|Unproductive_A_Chains",colnames(merged)))]
+final <- final[order(final$freq,decreasing = T),-1]
+colnames(final) <- c("Sequence_ID_Alpha", "Alpha_V","Alpha_J","Alpha_CDR3","Frequency_of_A","Same_A_Wells","Sequence_ID_Beta", "Beta_V","Beta_J","Beta_D","Beta_CDR3","Frequency_of_B","Same_B_Wells","Frequency_of_Pair","Same_Pair_Wells", "Unproductive Wells")
 
 print(paste("There were",length(rownames(achain)),"Alpha chains in the input file"))
 print(paste("There were",length(rownames(bchain)),"Beta chains in the input file"))
@@ -161,4 +185,3 @@ nums <- data.frame(c(paste("There were",length(rownames(achain)),"Alpha chains i
 #write output
 write.table(final,file = outfile,row.names = F, quote = F, sep ="\t")
 write.table(nums,file = outfile,row.names = F, quote = F, sep ="\t",append = T,col.names = F)
-
