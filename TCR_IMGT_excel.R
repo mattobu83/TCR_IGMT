@@ -9,7 +9,6 @@ library(stringr)
 
 #load in the Excel file from IMGT
 imgt <- read_excel(infile,sheet = 1)
-print(dim(imgt))
 
 
 if (length(args)==2) {
@@ -18,35 +17,23 @@ if (length(args)==2) {
   imgt2 <- read_excel(infile2,sheet = 1)
   imgt <- rbind(imgt,imgt2)
   print("Appended Second File to First")
-  print(dim(imgt))
 }
 
-if (lengths(strsplit(as.character(imgt$`Sequence ID` ),"-")[1]) == 1) {
-  print("Simple ID input")
-  achain <- imgt[as.numeric(str_extract(imgt$`Sequence ID`, "[0-9]+")) %% 2 != 0 ,]
-  bchain <- imgt[as.numeric(str_extract(imgt$`Sequence ID`, "[0-9]+")) %% 2 == 0 ,]
-} else {
-  print("Other ID input")
-  achain <- imgt[grep("JMWA",imgt$`Sequence ID`),]
-  bchain <- imgt[grep("JMWB",imgt$`Sequence ID`),]
-}
+
+imgt$number <- str_extract(imgt$`Sequence ID`,"\\d+[A-Z]")
+
+#split into a Chain and b chain
+print("All IDs in the same form ex: 1A")
+achain <- imgt[as.numeric(str_extract(imgt$number,"\\d+")) %% 2 != 0 ,]
+bchain <- imgt[as.numeric(str_extract(imgt$number,"\\d+")) %% 2 == 0 ,]
 
 #get only these columns from the excel file
-interestA <- c("Sequence ID","V-GENE and allele","J-GENE and allele","AA JUNCTION","V-DOMAIN Functionality")
-interestB <- c("Sequence ID","V-GENE and allele","J-GENE and allele","D-GENE and allele","AA JUNCTION","V-DOMAIN Functionality")
+interestA <- c("number","Sequence ID","V-GENE and allele","J-GENE and allele","AA JUNCTION","V-DOMAIN Functionality")
+interestB <- c("number","Sequence ID","V-GENE and allele","J-GENE and allele","D-GENE and allele","AA JUNCTION","V-DOMAIN Functionality")
 
 #make a dataframe from columns of interest
 dfa<- data.frame(achain[,interestA])
 dfb<- data.frame(bchain[,interestB])
-
-#Get the well number
-if (lengths(strsplit(as.character(imgt$`Sequence ID` ),"-")[1]) == 1) {
-  dfa$number <- dfa[,1]
-  dfb$number <- dfb[,1]
-} else {
-  dfa$number <- sapply(strsplit(dfa[,1],"-"), "[", 3)
-  dfb$number <- sapply(strsplit(dfb[,1],"-"), "[", 3)
-}
 
 
 #order by well number for pairing
@@ -94,7 +81,7 @@ dfb <- merge(dfb,freqb,by.x='genes', by.y=1)
 #makes list of each chain that is repeated
 groupings <- function(df){
   grouped <- list()
-  number <- df$number 
+  number <- df$Sequence.ID 
   names(number) <- df$group
   for(i in 1:length(unique(df$group))){
     grouped[[i]]<- paste(number[names(number) == i], collapse=",")
@@ -106,9 +93,9 @@ groupings <- function(df){
 #makes list of each pair of a and b that are repeated 
 pair_groupings <- function(df){
   grouped <- list()
-  numbera <- df$number.x
+  numbera <- df$Sequence.ID.x
   names(numbera) <- df$group
-  numberb <- df$number.y 
+  numberb <- df$Sequence.ID.y
   names(numberb) <- df$group
   for(i in 1:length(unique(df$group))){
     grouped[[i]]<- paste(paste(numbera[names(numbera) == i], collapse=","),paste(numberb[names(numberb) == i], collapse=","),collapse = ",")
@@ -120,7 +107,7 @@ pair_groupings <- function(df){
 #Outputs unproducive chains
 productive <- function(df){
   grouped <- list()
-  number <- df$number 
+  number <- df$Sequence.ID 
   group <- df$group
   prod <- df$V.DOMAIN.Functionality
   df <- data.frame(number,group,prod)
@@ -170,19 +157,23 @@ merged <- merge(merged,groupingab,by.x='group', by.y=0)
 merged$Unproductive_Chains <- paste(merged$Unproductive_A_Chains,merged$Unproductive_B_Chains)
 
 #tidy up dataframe
-final <- merged[!duplicated(merged$group),-(grep("genes|order|pair|number|group.x|group.y|V.DOMAIN.Functionality|Unproductive_B_Chains|Unproductive_A_Chains",colnames(merged)))]
-final <- final[order(final$freq,decreasing = T),-1]
-colnames(final) <- c("Sequence_ID_Alpha", "Alpha_V","Alpha_J","Alpha_CDR3","Frequency_of_A","Same_A_Wells","Sequence_ID_Beta", "Beta_V","Beta_J","Beta_D","Beta_CDR3","Frequency_of_B","Same_B_Wells","Frequency_of_Pair","Same_Pair_Wells", "Unproductive Wells")
+final <- merged
+final <- final[order(final$freq.x,final$freq,decreasing = T),]
+final <- final[,-(grep("genes|order|pair|number|group.x|group.y|V.DOMAIN.Functionality|Unproductive_B_Chains|Unproductive_A_Chains",colnames(final)))]
+final2 <- final[,-1]
+colnames(final2) <- c("Sequence_ID_Alpha", "Alpha_V","Alpha_J","Alpha_CDR3","Frequency_of_A","Same_A_Wells","Sequence_ID_Beta", "Beta_V","Beta_J","Beta_D","Beta_CDR3","Frequency_of_B","Same_B_Wells","Frequency_of_Pair","Same_Pair_Wells", "Unproductive Wells")
+interesting <- c("Sequence_ID_Alpha","Alpha_V","Alpha_J","Alpha_CDR3","Sequence_ID_Beta","Beta_V","Beta_J","Beta_D","Beta_CDR3","Frequency_of_A","Same_A_Wells","Frequency_of_B","Same_B_Wells","Frequency_of_Pair","Same_Pair_Wells", "Unproductive Wells")
+final2 <- final2[,interesting]
+
 
 print(paste("There were",length(rownames(achain)),"Alpha chains in the input file"))
 print(paste("There were",length(rownames(bchain)),"Beta chains in the input file"))
-print(paste("There were",length(rownames(final)),"Unique Pairs"))
+print(paste("There were",length(rownames(final[unique(final$group),])),"Unique Pairs"))
 
 nums <- data.frame(c(paste("There were",length(rownames(achain)),"Alpha chains in the input file"),
                      paste("There were",length(rownames(bchain)),"Beta chains in the input file"),
-                     paste("There were",length(rownames(final)),"Unique Pairs")))
+                     paste("There were",length(rownames(final[unique(final$group),])),"Unique Pairs")))
 
 #write output
-write.table(final,file = outfile,row.names = F, quote = F, sep ="\t")
+write.table(final2,file = outfile,row.names = F, quote = F, sep ="\t")
 write.table(nums,file = outfile,row.names = F, quote = F, sep ="\t",append = T,col.names = F)
-
