@@ -9,3 +9,10 @@ Rscript TCR_IMGT_excel.R In.xls Out.txt In2.xls
 ```
 
 where In.xls is the excel output from VQuest and Out.txt is the preferred output file name. A second input file can be supplied, In2.xls ,if there were more than 50 sequences in the run (Vquest can only process 50 sequences at a time). If there is no second file, the third argument can be omitted. 
+
+To run overlap for multiple files (Not from the same run):
+
+```bash
+Rscript TCR_IMGT_excel_HT.R $DIR Out.txt 
+```
+where $DIR is the directory where the files you want processed are located.
