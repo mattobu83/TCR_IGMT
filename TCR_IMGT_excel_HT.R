@@ -7,7 +7,7 @@ library(readxl)
 library(plyr)
 library(stringr)
 
-file_list <- list.files(path=path)
+file_list <- list.files(path=path, full.names = T)
 ID <- seq(length(file_list))
 print(paste("There were", length(file_list), "files read",sep = " " ))
 for(i in 1:length(file_list)){
